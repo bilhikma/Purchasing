@@ -7,6 +7,7 @@ import { dec, fmt, num, pct, pctS, rp, rpShort, yd } from "../lib/format";
 import { group, parseRows, sortSizes, sizeRank } from "../lib/ginee";
 import { computeRestock, materialItemsFrom, materialNeeds, poTotal, prodItemsFrom, type ProdPriceBasis, type RestockLine, type RestockMode } from "../lib/calc";
 import { createPo } from "../lib/po";
+import { saveFile } from "../lib/env";
 import type { SalesRow, Supplier } from "../lib/types";
 
 type Metric = "eff" | "tot" | "rev";
@@ -166,7 +167,7 @@ export default function Analisa() {
         <div className="actions">
           <input type="file" ref={fileRef} accept=".xlsx,.xls,.csv" hidden onChange={e => { handleFile(e.target.files?.[0]); e.target.value = ""; }} />
           <button className="btn" onClick={() => fileRef.current?.click()}><Icon name="upload" />Upload Data</button>
-          <button className="btn" onClick={() => exportXlsx({ rows, lines, needs, prodLabel, file: sales.file, series: ser, insights, qtyHead })}><Icon name="download" />Export Excel</button>
+          <button className="btn" onClick={async () => { const r = await exportXlsx({ rows, lines, needs, prodLabel, file: sales.file, series: ser, insights, qtyHead }); if (r === "saved") toast("File Excel tersimpan"); else if (r === "unavailable") toast("Export tidak tersedia di tampilan ini"); }}><Icon name="download" />Export Excel</button>
         </div>
       </header>
 
@@ -427,9 +428,9 @@ function PoFromRestock({ kind, lines, prodLabel, onClose, onDone }: { kind: "pro
 }
 
 // ---------------------------------------------------------------- export Excel
-function exportXlsx(o: { rows: SalesRow[]; lines: RestockLine[]; needs: ReturnType<typeof materialNeeds>; prodLabel: string; file: string; series: string; insights: string[]; qtyHead: string }) {
+async function exportXlsx(o: { rows: SalesRow[]; lines: RestockLine[]; needs: ReturnType<typeof materialNeeds>; prodLabel: string; file: string; series: string; insights: string[]; qtyHead: string }) {
   const { rows, lines, needs } = o;
-  if (!rows.length) return;
+  if (!rows.length) return "unavailable";
   const wb = XLSX.utils.book_new();
   const totEff = rows.reduce((s, r) => s + r.eff, 0), totTot = rows.reduce((s, r) => s + r.tot, 0), totRev = rows.reduce((s, r) => s + r.rev, 0);
   const colors = group(rows, "color").sort((a, b) => b.eff - a.eff);
@@ -455,5 +456,6 @@ function exportXlsx(o: { rows: SalesRow[]; lines: RestockLine[]; needs: ReturnTy
     ws["!cols"] = w.map(x => ({ wch: x }));
   });
   const safe = (o.prodLabel.replace(/^BILHIKMA\s*/i, "").replace(/[^\w\- ]+/g, "").trim().slice(0, 50) || "produk").replace(/\s+/g, "_");
-  XLSX.writeFile(wb, `Analisa_Sales_${safe}.xlsx`);
+  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  return saveFile(`Analisa_Sales_${safe}.xlsx`, new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
 }

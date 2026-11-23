@@ -10,13 +10,13 @@ const ROLES: [Role, string, string][] = [
 ];
 
 export default function Users() {
-  const { isOwner, user, toast } = useStore();
+  const { isOwner, user, toast, ask } = useStore();
   const [list, setList] = useState<Profile[]>([]);
   useEffect(() => { backend.list("profiles").then(setList).catch(e => toast(e.message)); }, [toast]);
   if (!isOwner) return <div className="card empty">Halaman ini hanya untuk Owner.</div>;
 
   async function setRole(p: Profile, role: Role) {
-    if (p.id === user?.id && role !== "owner" && !confirm("Anda akan melepas peran Owner sendiri. Lanjutkan?")) return;
+    if (p.id === user?.id && role !== "owner" && !await ask("Anda akan melepas peran Owner sendiri. Lanjutkan?")) return;
     try { const u = await backend.update("profiles", p.id, { role }); setList(list.map(x => (x.id === p.id ? u : x))); toast("Peran diperbarui"); }
     catch (e) { toast((e as Error).message); }
   }

@@ -31,7 +31,7 @@ function fromDraft(d: Draft): Partial<Article> {
 }
 
 export default function Articles() {
-  const { articles, materials, materialById, canEdit, reloadMaster, toast, rows } = useStore();
+  const { articles, materials, materialById, canEdit, reloadMaster, toast, rows, ask } = useStore();
   const [edit, setEdit] = useState<Draft | null>(null);
   const [newSize, setNewSize] = useState("");
   const [params, setParams] = useSearchParams();
@@ -72,7 +72,7 @@ export default function Articles() {
     } catch (e) { toast((e as Error).message); }
   }
   async function del(a: Article) {
-    if (!confirm(`Hapus artikel ${a.prefix} · ${a.name}?`)) return;
+    if (!await ask(`Hapus artikel ${a.prefix} · ${a.name}?`)) return;
     try { await backend.remove("articles", a.id); await reloadMaster(); } catch (e) { toast((e as Error).message); }
   }
   const set = (k: keyof Draft, v: string) => setEdit(e => ({ ...e!, [k]: v }));

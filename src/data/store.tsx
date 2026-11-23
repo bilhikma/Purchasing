@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { backend } from "./backend";
 import { parseRows } from "../lib/ginee";
+import { Modal } from "../components/ui";
 import { SAMPLE, SAMPLE_NAME } from "../lib/sample";
 import type { Article, Material, Profile, SalesRow, Supplier } from "../lib/types";
 
@@ -13,6 +14,8 @@ interface Store {
   reloadMaster(): Promise<void>;
   sales: Sales; rows: SalesRow[]; setSales(raw: unknown[][], file: string): void;
   toast(msg: string): void;
+  /** Konfirmasi di dalam halaman (dialog bawaan browser diblokir di claude.ai). */
+  ask(msg: string, okLabel?: string): Promise<boolean>;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -32,6 +35,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return { raw: SAMPLE, file: SAMPLE_NAME, isSample: true };
   });
 
+  const [askState, setAskState] = useState<{ msg: string; ok: string; done(v: boolean): void } | null>(null);
+  const ask = useCallback((msg: string, ok = "Ya, lanjutkan") => new Promise<boolean>(done => setAskState({ msg, ok, done })), []);
   const toast = useCallback((m: string) => setToastMsg({ m, k: Date.now() }), []);
   useEffect(() => { if (!toastMsg) return; const h = setTimeout(() => setToastMsg(null), 3200); return () => clearTimeout(h); }, [toastMsg]);
 
@@ -67,13 +72,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       supplierById: new Map(suppliers.map(s => [s.id, s])),
       materialById: new Map(materials.map(m => [m.id, m])),
       articleByPrefix: new Map(articles.map(a => [a.prefix, a])),
-      reloadMaster, sales, rows, setSales, toast,
+      reloadMaster, sales, rows, setSales, toast, ask,
     };
-  }, [user, authReady, suppliers, materials, articles, reloadMaster, sales, setSales, toast]);
+  }, [user, authReady, suppliers, materials, articles, reloadMaster, sales, setSales, toast, ask]);
 
   return (
     <Ctx.Provider value={value}>
       {children}
+      {askState && (
+        <Modal title="Konfirmasi" onClose={() => { askState.done(false); setAskState(null); }}
+          footer={<><button className="btn" onClick={() => { askState.done(false); setAskState(null); }}>Batal</button>
+            <button className="btn primary" autoFocus onClick={() => { askState.done(true); setAskState(null); }}>{askState.ok}</button></>}>
+          <p style={{ margin: 0 }}>{askState.msg}</p>
+        </Modal>
+      )}
       <div id="toast" style={{ opacity: toastMsg ? 1 : 0 }}>{toastMsg?.m}</div>
     </Ctx.Provider>
   );

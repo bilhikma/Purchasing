@@ -8,7 +8,7 @@ export const SUPPLIER_TYPES: [SupplierType, string][] = [["bahan", "Toko bahan /
 const typeLabel = (t: string) => SUPPLIER_TYPES.find(x => x[0] === t)?.[1] || t;
 
 export default function Suppliers() {
-  const { suppliers, canEdit, reloadMaster, toast, materials } = useStore();
+  const { suppliers, canEdit, reloadMaster, toast, materials, ask } = useStore();
   const [edit, setEdit] = useState<Partial<Supplier> | null>(null);
 
   async function save() {
@@ -21,7 +21,7 @@ export default function Suppliers() {
   }
   async function del(s: Supplier) {
     const used = materials.filter(m => m.supplier_id === s.id).length;
-    if (!confirm(`Hapus supplier "${s.name}"?${used ? ` ${used} bahan akan kehilangan supplier default-nya.` : ""}`)) return;
+    if (!await ask(`Hapus supplier "${s.name}"?${used ? ` ${used} bahan akan kehilangan supplier default-nya.` : ""}`)) return;
     try { await backend.remove("suppliers", s.id); await reloadMaster(); } catch (e) { toast((e as Error).message); }
   }
   const set = (k: keyof Supplier, v: string) => setEdit(e => ({ ...e!, [k]: v }));

@@ -3,11 +3,12 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { backend, resetDemo } from "../data/backend";
 import { useStore } from "../data/store";
 import { Icon } from "./ui";
+import { IS_ARTIFACT } from "../lib/env";
 
 const ROLE_LABEL = { owner: "Owner", purchasing: "Purchasing", viewer: "Viewer" };
 
 export default function Layout() {
-  const { user, isOwner } = useStore();
+  const { user, isOwner, ask } = useStore();
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   const L = (to: string, icon: string, label: string) => (
@@ -17,8 +18,8 @@ export default function Layout() {
     <>
       {backend.mode === "demo" && (
         <div className="demo-bar no-print">
-          Mode demo — data hanya tersimpan di browser ini. Sambungkan Supabase agar bisa dipakai bersama tim (lihat README).
-          <button onClick={() => confirm("Hapus semua data demo dan kembalikan ke contoh awal?") && resetDemo()}>Reset data demo</button>
+          {IS_ARTIFACT ? "Versi demo — data hanya tersimpan di perangkat ini." : "Mode demo — data hanya tersimpan di browser ini. Sambungkan Supabase agar bisa dipakai bersama tim (lihat README)."}
+          <button onClick={async () => (await ask("Hapus semua data demo dan kembalikan ke contoh awal?", "Reset")) && resetDemo()}>Reset data demo</button>
         </div>
       )}
       <div className="app">

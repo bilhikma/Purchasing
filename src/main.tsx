@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { HashRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, MemoryRouter, Route, Routes } from "react-router-dom";
+import { IS_ARTIFACT } from "./lib/env";
 import "./styles.css";
 import { StoreProvider, useStore } from "./data/store";
 import Layout from "./components/Layout";
@@ -37,6 +38,9 @@ function Gate() {
   );
 }
 
+// Di claude.ai alamat halaman tidak boleh diubah, jadi navigasi disimpan di memori.
+const Router = IS_ARTIFACT ? MemoryRouter : HashRouter;
+
 createRoot(document.getElementById("root")!).render(
-  <StrictMode><HashRouter><StoreProvider><Gate /></StoreProvider></HashRouter></StrictMode>,
+  <StrictMode><Router><StoreProvider><Gate /></StoreProvider></Router></StrictMode>,
 );

@@ -8,7 +8,7 @@ import type { Material } from "../lib/types";
 type Draft = Omit<Partial<Material>, "price_per_yard" | "roll_length"> & { price_per_yard?: string | number; roll_length?: string | number };
 
 export default function Materials() {
-  const { materials, suppliers, supplierById, articles, canEdit, reloadMaster, toast } = useStore();
+  const { materials, suppliers, supplierById, articles, canEdit, reloadMaster, toast, ask } = useStore();
   const [edit, setEdit] = useState<Draft | null>(null);
 
   async function save() {
@@ -22,7 +22,7 @@ export default function Materials() {
   }
   async function del(m: Material) {
     const used = articles.filter(a => a.material_id === m.id).map(a => a.prefix);
-    if (!confirm(`Hapus bahan "${m.name}"?${used.length ? ` Dipakai artikel: ${used.join(", ")}.` : ""}`)) return;
+    if (!await ask(`Hapus bahan "${m.name}"?${used.length ? ` Dipakai artikel: ${used.join(", ")}.` : ""}`)) return;
     try { await backend.remove("materials", m.id); await reloadMaster(); } catch (e) { toast((e as Error).message); }
   }
   const set = (k: keyof Draft, v: string) => setEdit(e => ({ ...e!, [k]: v }));

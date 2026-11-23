@@ -5,6 +5,7 @@ import { useStore } from "../data/store";
 import { Field, Icon } from "../components/ui";
 import { dec, fmt, fmtDate, num, rp } from "../lib/format";
 import { poTotal } from "../lib/calc";
+import { IS_ARTIFACT } from "../lib/env";
 import { statusFromReceipt, statusLabel, typeLabel } from "../lib/po";
 import type { PoItem, PoStatus, PurchaseOrder } from "../lib/types";
 
@@ -16,7 +17,7 @@ const fromDraft = (i: ItemDraft): PoItem => ({ ...i, qty: num(i.qty), price: num
 export default function PoDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { supplierById, suppliers, canEdit, toast, user } = useStore();
+  const { supplierById, suppliers, canEdit, toast, user, ask } = useStore();
   const [po, setPo] = useState<PurchaseOrder | null>(null);
   const [items, setItems] = useState<ItemDraft[]>([]);
   const [head, setHead] = useState({ supplier_id: "", order_date: "", due_date: "", notes: "" });
@@ -56,8 +57,8 @@ export default function PoDetail() {
       if (!parsed.length || parsed.some(i => !i.qty)) return toast("Lengkapi item dan qty dulu");
       return saveAll({ status: "dipesan" }, "PO ditandai sudah dipesan");
     }
-    if (s === "batal" && !confirm("Batalkan PO ini?")) return;
-    if (s === "draft" && !confirm("Kembalikan PO ke draft supaya bisa diubah?")) return;
+    if (s === "batal" && !await ask("Batalkan PO ini?")) return;
+    if (s === "draft" && !await ask("Kembalikan PO ke draft supaya bisa diubah?")) return;
     persist({ status: s }, "Status diperbarui");
   }
   async function saveReceipt() {
@@ -65,7 +66,7 @@ export default function PoDetail() {
     persist({ items: parsed, status: next }, "Penerimaan barang tersimpan");
   }
   async function del() {
-    if (!confirm(`Hapus ${po!.number}? Tindakan ini tidak bisa dibatalkan.`)) return;
+    if (!await ask(`Hapus ${po!.number}? Tindakan ini tidak bisa dibatalkan.`)) return;
     try { await backend.remove("purchase_orders", po!.id); toast("PO dihapus"); nav("/po"); } catch (e) { toast((e as Error).message); }
   }
   const setItem = (i: number, k: keyof ItemDraft, v: string) => { setItems(items.map((x, j) => (j === i ? { ...x, [k]: v } : x))); setDirty(true); };
@@ -89,7 +90,7 @@ export default function PoDetail() {
           <div className="sub">Dibuat {fmtDate(po.created_at?.slice(0, 10))}{po.updated_at && po.updated_at !== po.created_at ? ` · diubah ${fmtDate(po.updated_at.slice(0, 10))}` : ""}</div>
         </div>
         <div className="actions">
-          <button className="btn" onClick={() => print()}><Icon name="print" />Cetak / PDF</button>
+          {!IS_ARTIFACT && <button className="btn" onClick={() => print()}><Icon name="print" />Cetak / PDF</button>}
           {sup?.phone && <a className="btn" target="_blank" rel="noreferrer" href={waLink(sup.phone, po, parsed, total)}>Kirim via WA</a>}
           {canEdit && po.status === "draft" && <>
             <button className="btn" disabled={!dirty} onClick={() => saveAll()}>Simpan</button>
